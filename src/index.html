@@ -598,11 +598,12 @@
 </header>
 
 <main class="main">
-  
-  <div class="error-banner" id="error-banner">
-  <span id="error-message"></span>
-</div>
 
+  <!-- ERROR BANNER -->
+  <div class="error-banner" id="error-banner">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span id="error-message">Error al conectar con la API</span>
+  </div>
 
   <!-- STATS -->
   <p class="section-label">Resumen general</p>
@@ -625,11 +626,41 @@
       <div class="stat-value" id="stat-total">—</div>
       <div class="stat-sublabel">en sistema</div>
     </div>
+    <div class="stat-card resolved">
+      <div class="stat-icon">✓</div>
+      <div class="stat-label">Info</div>
+      <div class="stat-value" id="stat-info">—</div>
+      <div class="stat-sublabel">alertas informativas</div>
+    </div>
   </div>
 
   <!-- CHARTS -->
   <p class="section-label">Distribución</p>
   <div class="charts-row">
+
+    <!-- Donut -->
+    <div class="chart-card">
+      <div class="chart-title">Por severidad</div>
+      <div class="donut-wrap">
+        <div class="donut-svg-wrap">
+          <svg id="donut-svg" width="130" height="130" viewBox="0 0 130 130"></svg>
+          <div class="donut-center">
+            <div class="donut-center-val" id="donut-total">0</div>
+            <div class="donut-center-lbl">total</div>
+          </div>
+        </div>
+        <div class="donut-legend" id="donut-legend"></div>
+      </div>
+    </div>
+
+    <!-- Bar chart by resource -->
+    <div class="chart-card">
+      <div class="chart-title">Alertas por recurso</div>
+      <div class="bar-chart" id="bar-chart">
+        <div class="state-box" style="padding: 20px;"><div class="spinner"></div></div>
+      </div>
+    </div>
+
   </div>
 
   <!-- FILTERS -->
@@ -716,8 +747,8 @@ async function loadAll() {
     const data = await res.json();
     allAlerts = data.alerts || data || [];
     renderStats();
-    //renderDonut();
-    //renderBarChart();
+    renderDonut();
+    renderBarChart();
     applyFilters();
     document.getElementById('last-update').textContent =
       'Actualizado: ' + new Date().toLocaleTimeString('es-ES');

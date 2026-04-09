@@ -4,6 +4,7 @@ const client = new CosmosClient(process.env.COSMOSDB_CONNECTION_STRING);
 const DATABASE_ID  = process.env.COSMOSDB_DATABASE_ID  || "Bancsito";
 const CONTAINER_ID = process.env.COSMOSDB_CONTAINER_ID || "Alertas";
 
+
 /**
  * GET /api/alerts
  * Query params:
