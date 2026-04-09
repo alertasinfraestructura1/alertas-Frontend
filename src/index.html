@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Centro de Alertas · Azure Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:       #0d0f14;
+      --bg-panel: #13161e;
+      --bg-card:  #191d28;
+      --border:   #2a2f3e;
+      --border-hover: #3d4459;
+      --text:     #e8eaf0;
+      --muted:    #7a80a0;
+      --subtle:   #3a3f52;
+      --critical: #ff4757;
+      --critical-bg: rgba(255,71,87,.10);
+      --critical-border: rgba(255,71,87,.30);
+      --warning:  #ffa502;
+      --warning-bg: rgba(255,165,2,.10);
+      --warning-border: rgba(255,165,2,.30);
+      --info:     #1e90ff;
+      --info-bg:  rgba(30,144,255,.10);
+      --info-border: rgba(30,144,255,.30);
+      --success:  #2ed573;
+      --accent:   #5e81f4;
+      --font-sans: 'IBM Plex Sans', sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── TOP BAR ──────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      height: 56px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: .04em;
+    }
+    .topbar-brand svg { opacity: .7; }
+    .topbar-brand span { color: var(--muted); margin: 0 4px; }
+    .topbar-brand strong { color: var(--text); }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity: 1; }
+      50% { opacity: .4; }
+    }
+    .status-text { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+    .refresh-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .2s;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .refresh-btn svg { transition: transform .4s; }
+    .refresh-btn.spinning svg { animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MAIN LAYOUT ──────────────────────────── */
+    .main { max-width: 1440px; margin: 0 auto; padding: 28px; }
+
+    /* ── SECTION HEADER ───────────────────────── */
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── STATS GRID ───────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .2s, transform .2s;
+      cursor: default;
+    }
+    .stat-card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .stat-card:hover::before { opacity: 1; }
+
+    .stat-card.critical { border-left: 3px solid var(--critical); }
+    .stat-card.critical::before { background: var(--critical-bg); }
+    .stat-card.warning  { border-left: 3px solid var(--warning); }
+    .stat-card.warning::before  { background: var(--warning-bg); }
+    .stat-card.total    { border-left: 3px solid var(--accent); }
+    .stat-card.resolved { border-left: 3px solid var(--success); }
+
+    .stat-label {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .stat-value {
+      font-size: 36px;
+      font-weight: 300;
+      font-family: var(--font-mono);
+      line-height: 1;
+      position: relative;
+    }
+    .stat-card.critical .stat-value { color: var(--critical); }
+    .stat-card.warning  .stat-value { color: var(--warning); }
+    .stat-card.total    .stat-value { color: var(--accent); }
+    .stat-card.resolved .stat-value { color: var(--success); }
+    .stat-sublabel {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+      position: relative;
+    }
+    .stat-trend {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      position: relative;
+    }
+    .stat-trend.up { color: var(--critical); }
+    .stat-trend.down { color: var(--success); }
+
+    /* icon in corner */
+    .stat-icon {
+      position: absolute;
+      top: 18px; right: 18px;
+      opacity: .12;
+      font-size: 32px;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    /* ── CHARTS ROW ───────────────────────────── */
+    .charts-row {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 860px) {
+      .charts-row { grid-template-columns: 1fr; }
+    }
+
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px;
+    }
+    .chart-title {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 20px;
+    }
+
+    /* Donut */
+    .donut-wrap { display: flex; align-items: center; gap: 24px; }
+    .donut-svg-wrap { position: relative; flex-shrink: 0; }
+    .donut-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .donut-center-val {
+      font-family: var(--font-mono);
+      font-size: 26px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1;
+    }
+    .donut-center-lbl {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .donut-legend { display: flex; flex-direction: column; gap: 10px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .legend-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .legend-label { font-size: 12px; color: var(--muted); }
+    .legend-val { font-size: 13px; font-weight: 500; font-family: var(--font-mono); margin-left: auto; padding-left: 16px; }
+
+    /* Bar chart */
+    .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { display: flex; align-items: center; gap: 10px; }
+    .bar-label { font-size: 12px; color: var(--muted); width: 120px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-track { flex: 1; height: 8px; background: var(--bg-panel); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width .8s cubic-bezier(.22,.6,.36,1); }
+    .bar-count { font-size: 12px; font-family: var(--font-mono); color: var(--muted); width: 28px; text-align: right; flex-shrink: 0; }
+
+    /* ── FILTERS BAR ──────────────────────────── */
+    .filters-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .filter-chip {
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+    .filter-chip:hover { border-color: var(--border-hover); color: var(--text); }
+    .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .filter-chip.active.critical { background: var(--critical); border-color: var(--critical); }
+    .filter-chip.active.warning  { background: var(--warning);  border-color: var(--warning);  color: #000; }
+
+    .search-box {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      transition: border-color .2s;
+    }
+    .search-box:focus-within { border-color: var(--accent); }
+    .search-box svg { color: var(--muted); flex-shrink: 0; }
+    .search-box input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--font-sans);
+      width: 200px;
+    }
+    .search-box input::placeholder { color: var(--muted); }
+
+    /* ── ALERTS TABLE ─────────────────────────── */
+    .table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .table-card-header {
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .table-card-title {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .table-count {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--bg-panel);
+      padding: 3px 10px;
+      border-radius: 10px;
+    }
+
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead tr {
+      background: var(--bg-panel);
+    }
+    th {
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: color .15s;
+    }
+    th:hover { color: var(--text); }
+    th.sorted { color: var(--accent); }
+    th .sort-arrow { margin-left: 4px; opacity: .6; }
+
+    tbody tr {
+      border-top: 1px solid var(--border);
+      transition: background .15s;
+    }
+    tbody tr:hover { background: rgba(94,129,244,.04); }
+    tbody tr.fade-in {
+      animation: row-in .3s ease both;
+    }
+    @keyframes row-in {
+      from { opacity: 0; transform: translateX(-6px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    td {
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text);
+      vertical-align: middle;
+    }
+
+    /* severity badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      white-space: nowrap;
+    }
+    .badge-dot { width: 5px; height: 5px; border-radius: 50%; }
+    .badge.critical { background: var(--critical-bg); color: var(--critical); border: 1px solid var(--critical-border); }
+    .badge.critical .badge-dot { background: var(--critical); box-shadow: 0 0 5px var(--critical); }
+    .badge.warning  { background: var(--warning-bg);  color: var(--warning);  border: 1px solid var(--warning-border); }
+    .badge.warning  .badge-dot { background: var(--warning); box-shadow: 0 0 5px var(--warning); }
+    .badge.info     { background: var(--info-bg);     color: var(--info);     border: 1px solid var(--info-border); }
+    .badge.info     .badge-dot { background: var(--info); }
+
+    /* resource cell */
+    .resource-cell { display: flex; align-items: center; gap: 8px; }
+    .resource-icon {
+      width: 26px; height: 26px;
+      background: var(--bg-panel);
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .resource-name { font-size: 12px; font-family: var(--font-mono); color: var(--text); }
+    .resource-type { font-size: 11px; color: var(--muted); }
+
+    /* assigned avatar */
+    .avatar {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600; color: #fff;
+      flex-shrink: 0;
+    }
+    .assigned-cell { display: flex; align-items: center; gap: 8px; }
+    .assigned-name { font-size: 12px; }
+
+    /* suggestion cell */
+    .suggestion-text {
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .suggestion-expand {
+      cursor: pointer;
+      color: var(--accent);
+      font-size: 11px;
+      text-decoration: underline;
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* description */
+    .desc-text {
+      font-size: 12px;
+      color: var(--text);
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* alert id */
+    .alert-id {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* empty/loading states */
+    .state-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 64px 24px;
+      gap: 14px;
+      color: var(--muted);
+    }
+    .state-box svg { opacity: .3; }
+    .state-box p { font-size: 13px; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    /* error banner */
+    .error-banner {
+      background: var(--critical-bg);
+      border: 1px solid var(--critical-border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: var(--critical);
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+    .error-banner.show { display: flex; }
+
+    /* modal for full suggestion */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 200;
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      max-width: 540px;
+      width: 90%;
+    }
+    .modal-title {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .modal-body { font-size: 13px; color: var(--muted); line-height: 1.7; }
+    .modal-close {
+      margin-top: 20px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 18px;
+      border-radius: 7px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .modal-close:hover { border-color: var(--border-hover); }
+
+    /* pagination */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 22px;
+      border-top: 1px solid var(--border);
+    }
+    .pagination-info { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+    .pagination-btns { display: flex; gap: 6px; }
+    .page-btn {
+      width: 30px; height: 30px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all .15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .page-btn:disabled { opacity: .3; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+      <rect x="1" y="1" width="9" height="9" rx="2" fill="var(--accent)" opacity=".8"/>
+      <rect x="12" y="1" width="9" height="9" rx="2" fill="var(--accent)" opacity=".5"/>
+      <rect x="1" y="12" width="9" height="9" rx="2" fill="var(--accent)" opacity=".5"/>
+      <rect x="12" y="12" width="9" height="9" rx="2" fill="var(--accent)" opacity=".3"/>
+    </svg>
+    Azure Monitor <span>/</span> <strong>Centro de Alertas</strong>
+  </div>
+  <div class="topbar-right">
+    <div class="status-dot"></div>
+    <span class="status-text" id="last-update">Conectando…</span>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadAll()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Actualizar
+    </button>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- ERROR BANNER -->
+  <div class="error-banner" id="error-banner">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span id="error-message">Error al conectar con la API</span>
+  </div>
+
+  <!-- STATS -->
+  <p class="section-label">Resumen general</p>
+  <div class="stats-grid">
+    <div class="stat-card critical">
+      <div class="stat-icon">⚠</div>
+      <div class="stat-label">Críticas</div>
+      <div class="stat-value" id="stat-critical">—</div>
+      <div class="stat-sublabel">alertas activas</div>
+    </div>
+    <div class="stat-card warning">
+      <div class="stat-icon">◈</div>
+      <div class="stat-label">Advertencias</div>
+      <div class="stat-value" id="stat-warning">—</div>
+      <div class="stat-sublabel">alertas activas</div>
+    </div>
+    <div class="stat-card total">
+      <div class="stat-icon">◉</div>
+      <div class="stat-label">Total Alertas</div>
+      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-sublabel">en sistema</div>
+    </div>
+    <div class="stat-card resolved">
+      <div class="stat-icon">✓</div>
+      <div class="stat-label">Info</div>
+      <div class="stat-value" id="stat-info">—</div>
+      <div class="stat-sublabel">alertas informativas</div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <p class="section-label">Distribución</p>
+  <div class="charts-row">
+
+    <!-- Donut -->
+    <div class="chart-card">
+      <div class="chart-title">Por severidad</div>
+      <div class="donut-wrap">
+        <div class="donut-svg-wrap">
+          <svg id="donut-svg" width="130" height="130" viewBox="0 0 130 130"></svg>
+          <div class="donut-center">
+            <div class="donut-center-val" id="donut-total">0</div>
+            <div class="donut-center-lbl">total</div>
+          </div>
+        </div>
+        <div class="donut-legend" id="donut-legend"></div>
+      </div>
+    </div>
+
+    <!-- Bar chart by resource -->
+    <div class="chart-card">
+      <div class="chart-title">Alertas por recurso</div>
+      <div class="bar-chart" id="bar-chart">
+        <div class="state-box" style="padding: 20px;"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters-bar">
+    <button class="filter-chip active" data-filter="all" onclick="setFilter('all', this)">Todos</button>
+    <button class="filter-chip critical" data-filter="critical" onclick="setFilter('critical', this)">Crítico</button>
+    <button class="filter-chip warning"  data-filter="warning"  onclick="setFilter('warning', this)">Warning</button>
+    <button class="filter-chip"          data-filter="informational" onclick="setFilter('informational', this)">Informacional</button>
+    <div class="search-box">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="search-input" placeholder="Buscar alerta, recurso…" oninput="onSearch()" />
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <span class="table-card-title">Alertas activas</span>
+      <span class="table-count" id="table-count">0 alertas</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('alertId')" id="th-alertId">ID Alerta <span class="sort-arrow">↕</span></th>
+            <th onclick="sortBy('severity')">Severidad</th>
+            <th onclick="sortBy('resource')" id="th-resource">Recurso</th>
+            <th onclick="sortBy('description')">Descripción</th>
+            <th onclick="sortBy('assignedTo')">Asignado a</th>
+            <th>Sugerencia</th>
+          </tr>
+        </thead>
+        <tbody id="alerts-tbody">
+          <tr>
+            <td colspan="6">
+              <div class="state-box"><div class="spinner"></div><p>Cargando alertas…</p></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination" style="display:none">
+      <span class="pagination-info" id="pagination-info"></span>
+      <div class="pagination-btns" id="pagination-btns"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- SUGGESTION MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title">💡 Sugerencia de remediación</div>
+    <div class="modal-body" id="modal-body"></div>
+    <button class="modal-close" onclick="closeModal()">Cerrar</button>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+let allAlerts = [];
+let filteredAlerts = [];
+let currentFilter = 'all';
+let currentSearch = '';
+let sortKey = 'alertId';
+let sortDir = 1;
+let currentPage = 1;
+const PAGE_SIZE = 15;
+
+// ─────────────────────────────────────────────
+//  BOOTSTRAP
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', loadAll);
+
+async function loadAll() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  hideError();
+  try {
+    const res = await fetch('/api/alerts');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    allAlerts = data.alerts || data || [];
+    renderStats();
+    renderDonut();
+    renderBarChart();
+    applyFilters();
+    document.getElementById('last-update').textContent =
+      'Actualizado: ' + new Date().toLocaleTimeString('es-ES');
+  } catch (err) {
+    showError('No se pudo conectar con la API. ' + err.message);
+    // Demo data fallback
+    allAlerts = DEMO_ALERTS;
+    renderStats();
+    renderDonut();
+    renderBarChart();
+    applyFilters();
+  } finally {
+    btn.classList.remove('spinning');
+  }
+}
+
+// ─────────────────────────────────────────────
+//  STATS
+// ─────────────────────────────────────────────
+function renderStats() {
+  const counts = { critical: 0, warning: 0, informational: 0 };
+  allAlerts.forEach(a => {
+    const s = (a.severity || a.category || '').toLowerCase();
+    if (s.includes('crit')) counts.critical++;
+    else if (s.includes('warn') || s.includes('warning')) counts.warning++;
+    else counts.informational++;
+  });
+  animateCount('stat-critical', counts.critical);
+  animateCount('stat-warning', counts.warning);
+  animateCount('stat-info', counts.informational);
+  animateCount('stat-total', allAlerts.length);
+}
+
+function animateCount(id, target) {
+  const el = document.getElementById(id);
+  let start = 0;
+  const dur = 600, step = 16;
+  const inc = target / (dur / step);
+  const t = setInterval(() => {
+    start = Math.min(start + inc, target);
+    el.textContent = Math.round(start);
+    if (start >= target) clearInterval(t);
+  }, step);
+}
+
+// ─────────────────────────────────────────────
+//  DONUT
+// ─────────────────────────────────────────────
+function renderDonut() {
+  const counts = getSeverityCounts();
+  const total = allAlerts.length;
+  document.getElementById('donut-total').textContent = total;
+
+  const segments = [
+    { label: 'Crítico',      key: 'critical',      color: 'var(--critical)', count: counts.critical },
+    { label: 'Warning',      key: 'warning',       color: 'var(--warning)',  count: counts.warning },
+    { label: 'Informacional',key: 'informational', color: 'var(--info)',     count: counts.informational },
+  ].filter(s => s.count > 0);
+
+  const cx = 65, cy = 65, r = 48, thickness = 16;
+  const circumference = 2 * Math.PI * r;
+  const svg = document.getElementById('donut-svg');
+  svg.innerHTML = '';
+
+  let offset = -circumference / 4; // start at top
+  segments.forEach(seg => {
+    const frac = total > 0 ? seg.count / total : 0;
+    const dash = frac * circumference;
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', cx);
+    circle.setAttribute('cy', cy);
+    circle.setAttribute('r', r);
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', seg.color);
+    circle.setAttribute('stroke-width', thickness);
+    circle.setAttribute('stroke-dasharray', `${dash} ${circumference - dash}`);
+    circle.setAttribute('stroke-dashoffset', -offset);
+    circle.setAttribute('style', 'transition: stroke-dasharray .8s cubic-bezier(.22,.6,.36,1)');
+    svg.appendChild(circle);
+    offset += dash;
+  });
+
+  // legend
+  const leg = document.getElementById('donut-legend');
+  leg.innerHTML = segments.map(s => `
+    <div class="legend-item">
+      <span class="legend-dot" style="background:${s.color}"></span>
+      <span class="legend-label">${s.label}</span>
+      <span class="legend-val" style="color:${s.color}">${s.count}</span>
+    </div>`).join('');
+}
+
+function getSeverityCounts() {
+  const c = { critical: 0, warning: 0, informational: 0 };
+  allAlerts.forEach(a => {
+    const s = normSeverity(a);
+    if (s === 'critical') c.critical++;
+    else if (s === 'warning') c.warning++;
+    else c.informational++;
+  });
+  return c;
+}
+
+function normSeverity(a) {
+  const s = (a.severity || a.category || '').toLowerCase();
+  if (s.includes('crit')) return 'critical';
+  if (s.includes('warn')) return 'warning';
+  return 'informational';
+}
+
+// ─────────────────────────────────────────────
+//  BAR CHART
+// ─────────────────────────────────────────────
+function renderBarChart() {
+  const resourceMap = {};
+  allAlerts.forEach(a => {
+    const r = a.resource || a.resourceName || 'Desconocido';
+    resourceMap[r] = (resourceMap[r] || 0) + 1;
+  });
+  const sorted = Object.entries(resourceMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const max = sorted[0]?.[1] || 1;
+
+  const colors = ['var(--critical)', 'var(--warning)', 'var(--accent)', 'var(--info)', 'var(--success)'];
+  const bc = document.getElementById('bar-chart');
+  bc.innerHTML = sorted.length === 0
+    ? '<p style="color:var(--muted);font-size:12px;text-align:center;padding:16px">Sin datos</p>'
+    : sorted.map(([name, count], i) => `
+    <div class="bar-row">
+      <span class="bar-label" title="${name}">${name}</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:0%;background:${colors[i % colors.length]}"
+             data-target="${Math.round(count / max * 100)}"></div>
+      </div>
+      <span class="bar-count">${count}</span>
+    </div>`).join('');
+
+  // animate bars
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.bar-fill').forEach(el => {
+      el.style.width = el.dataset.target + '%';
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
+//  FILTER + SEARCH
+// ─────────────────────────────────────────────
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  currentPage = 1;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function onSearch() {
+  currentSearch = document.getElementById('search-input').value.toLowerCase();
+  currentPage = 1;
+  applyFilters();
+}
+
+function applyFilters() {
+  filteredAlerts = allAlerts.filter(a => {
+    const sev = normSeverity(a);
+    const matchFilter = currentFilter === 'all' || sev === currentFilter;
+    const search = currentSearch;
+    const matchSearch = !search || [
+      a.alertId, a.resource, a.description, a.assignedTo, a.suggestion
+    ].some(v => (v || '').toLowerCase().includes(search));
+    return matchFilter && matchSearch;
+  });
+
+  // sort
+  filteredAlerts.sort((a, b) => {
+    const va = (a[sortKey] || '').toString().toLowerCase();
+    const vb = (b[sortKey] || '').toString().toLowerCase();
+    return va < vb ? -sortDir : va > vb ? sortDir : 0;
+  });
+
+  document.getElementById('table-count').textContent =
+    filteredAlerts.length + ' alerta' + (filteredAlerts.length !== 1 ? 's' : '');
+
+  renderTable();
+  renderPagination();
+}
+
+function sortBy(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = 1; }
+  applyFilters();
+}
+
+// ─────────────────────────────────────────────
+//  TABLE RENDER
+// ─────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('alerts-tbody');
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = filteredAlerts.slice(start, start + PAGE_SIZE);
+
+  if (page.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6">
+      <div class="state-box">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <p>No se encontraron alertas</p>
+      </div></td></tr>`;
+    return;
+  }
+
+  const resourceIcons = { vm: '🖥', sql: '🗄', storage: '📦', webapp: '🌐', network: '🔗', default: '⚙' };
+  function getIcon(resource) {
+    const r = (resource || '').toLowerCase();
+    if (r.includes('vm') || r.includes('virtual')) return resourceIcons.vm;
+    if (r.includes('sql') || r.includes('db') || r.includes('cosmos')) return resourceIcons.sql;
+    if (r.includes('storage') || r.includes('blob')) return resourceIcons.storage;
+    if (r.includes('web') || r.includes('app')) return resourceIcons.webapp;
+    if (r.includes('net') || r.includes('vnet')) return resourceIcons.network;
+    return resourceIcons.default;
+  }
+
+  function initials(name) {
+    return (name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  tbody.innerHTML = page.map((a, i) => {
+    const sev = normSeverity(a);
+    const badgeLabel = sev === 'critical' ? 'Crítico' : sev === 'warning' ? 'Warning' : 'Info';
+    const sugg = a.suggestion || a.sugerencia || '';
+    const shortSugg = sugg.length > 60 ? sugg.slice(0, 57) + '…' : sugg;
+    const hasMore = sugg.length > 60;
+    return `<tr class="fade-in" style="animation-delay:${i * 30}ms">
+      <td><span class="alert-id">${a.alertId || a.id || '—'}</span></td>
+      <td>
+        <span class="badge ${sev}">
+          <span class="badge-dot"></span>
+          ${badgeLabel}
+        </span>
+      </td>
+      <td>
+        <div class="resource-cell">
+          <div class="resource-icon">${getIcon(a.resource)}</div>
+          <div>
+            <div class="resource-name">${a.resource || '—'}</div>
+            <div class="resource-type">${a.resourceType || ''}</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="desc-text" title="${a.description || ''}">${a.description || '—'}</span></td>
+      <td>
+        <div class="assigned-cell">
+          <div class="avatar">${initials(a.assignedTo)}</div>
+          <span class="assigned-name">${a.assignedTo || 'Sin asignar'}</span>
+        </div>
+      </td>
+      <td>
+        <span class="suggestion-text">${shortSugg || '—'}</span>
+        ${hasMore ? `<span class="suggestion-expand" onclick="showSuggestion(\`${sugg.replace(/`/g,'\\`')}\`)">Ver completo</span>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+//  PAGINATION
+// ─────────────────────────────────────────────
+function renderPagination() {
+  const totalPages = Math.ceil(filteredAlerts.length / PAGE_SIZE);
+  const pag = document.getElementById('pagination');
+  if (totalPages <= 1) { pag.style.display = 'none'; return; }
+  pag.style.display = 'flex';
+
+  const start = (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, filteredAlerts.length);
+  document.getElementById('pagination-info').textContent =
+    `Mostrando ${start}–${end} de ${filteredAlerts.length}`;
+
+  const btns = document.getElementById('pagination-btns');
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+  for (let p = 1; p <= totalPages; p++) {
+    if (totalPages > 7 && p > 2 && p < totalPages - 1 && Math.abs(p - currentPage) > 1) {
+      if (p === 3 || p === totalPages - 2) html += `<button class="page-btn" disabled>…</button>`;
+      continue;
+    }
+    html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>›</button>`;
+  btns.innerHTML = html;
+}
+
+function goPage(p) {
+  const total = Math.ceil(filteredAlerts.length / PAGE_SIZE);
+  if (p < 1 || p > total) return;
+  currentPage = p;
+  renderTable();
+  renderPagination();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─────────────────────────────────────────────
+//  MODAL
+// ─────────────────────────────────────────────
+function showSuggestion(text) {
+  document.getElementById('modal-body').textContent = text;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay'))
+    document.getElementById('modal-overlay').classList.remove('show');
+}
+
+// ─────────────────────────────────────────────
+//  ERROR
+// ─────────────────────────────────────────────
+function showError(msg) {
+  const b = document.getElementById('error-banner');
+  document.getElementById('error-message').textContent = msg;
+  b.classList.add('show');
+}
+function hideError() {
+  document.getElementById('error-banner').classList.remove('show');
+}
+
+// ─────────────────────────────────────────────
+//  DEMO DATA (fallback si la API no está lista)
+// ─────────────────────────────────────────────
+const DEMO_ALERTS = [
+  { alertId: 'ALT-0001', severity: 'Critical', resource: 'vm-prod-01', resourceType: 'Virtual Machine', description: 'CPU por encima del 95% por más de 15 min', assignedTo: 'Carlos Pérez', suggestion: 'Escalar verticalmente la VM a Standard_D4s_v3 o revisar procesos que consuman excesiva CPU. Considerar balanceo de carga.' },
+  { alertId: 'ALT-0002', severity: 'Warning',  resource: 'sql-prod-db', resourceType: 'SQL Database',   description: 'Uso de DTUs al 80%', assignedTo: 'Ana García',   suggestion: 'Revisar queries sin índice. Optimizar stored procedures. Considerar subir el tier de base de datos.' },
+  { alertId: 'ALT-0003', severity: 'Critical', resource: 'storage-bkp', resourceType: 'Storage Account',description: 'Capacidad al 98%', assignedTo: 'Luis Martín',  suggestion: 'Eliminar blobs expirados, habilitar lifecycle management policy para mover datos fríos a Archive tier.' },
+  { alertId: 'ALT-0004', severity: 'Warning',  resource: 'webapp-api',  resourceType: 'App Service',    description: 'Tiempo de respuesta > 2s en promedio', assignedTo: 'María López',  suggestion: 'Habilitar caching en el API Management, revisar dependencias externas con alta latencia.' },
+  { alertId: 'ALT-0005', severity: 'Informational', resource: 'vnet-hub', resourceType: 'Virtual Network', description: 'Nueva regla NSG aplicada', assignedTo: 'Ops Team', suggestion: 'Revisar que la nueva regla no afecte conectividad de las subnets de producción.' },
+  { alertId: 'ALT-0006', severity: 'Critical', resource: 'aks-cluster', resourceType: 'AKS',            description: 'Nodo NotReady detectado', assignedTo: 'Carlos Pérez', suggestion: 'Ejecutar kubectl describe node para detalles. Considerar cordon + drain y reciclar el nodo.' },
+  { alertId: 'ALT-0007', severity: 'Warning',  resource: 'cosmos-main', resourceType: 'Cosmos DB',      description: 'Request Units consumidas al 75%', assignedTo: 'Ana García',   suggestion: 'Revisar consultas sin partition key, habilitar autoscale RU para absorber picos de demanda.' },
+  { alertId: 'ALT-0008', severity: 'Warning',  resource: 'vm-dev-02',   resourceType: 'Virtual Machine', description: 'Memoria disponible < 500MB', assignedTo: 'Luis Martín',  suggestion: 'Revisar aplicaciones con memory leaks, considerar upgrade de RAM o redistribuir carga.' },
+  { alertId: 'ALT-0009', severity: 'Informational', resource: 'keyvault-prod', resourceType: 'Key Vault', description: 'Certificado expira en 30 días', assignedTo: 'Security Team', suggestion: 'Renovar certificado antes de la fecha de expiración para evitar interrupción de servicio.' },
+  { alertId: 'ALT-0010', severity: 'Critical', resource: 'apigw-prod',  resourceType: 'API Gateway',    description: 'Tasa de error 5xx > 5%', assignedTo: 'María López',  suggestion: 'Revisar logs de backend, verificar disponibilidad de servicios upstream, activar circuit breaker.' },
+  { alertId: 'ALT-0011', severity: 'Warning',  resource: 'redis-cache', resourceType: 'Redis Cache',    description: 'Hit ratio < 60%', assignedTo: 'Carlos Pérez', suggestion: 'Revisar TTL de keys, aumentar tamaño del cache, analizar patrones de acceso con Redis Monitor.' },
+  { alertId: 'ALT-0012', severity: 'Informational', resource: 'funcapp-01', resourceType: 'Function App', description: 'Cold start detectado > 10s', assignedTo: 'Ana García', suggestion: 'Habilitar Always On o usar Premium plan para eliminar cold starts en funciones críticas.' },
+];
+</script>
+</body>
+</html>

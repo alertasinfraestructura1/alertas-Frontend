@@ -1,0 +1,14 @@
+{
+  "name": "azure-alerts-api",
+  "version": "1.0.0",
+  "description": "Azure Functions backend para el dashboard de alertas",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
