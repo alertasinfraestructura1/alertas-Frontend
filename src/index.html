@@ -917,6 +917,7 @@ function onSearch() {
 
 function applyFilters() {
   filteredAlerts = allAlerts.filter(a => {
+    if (i === 0) console.log('SEV:', sev, 'FILTER:', currentFilter, 'MATCH:', currentFilter === 'all' || sev === currentFilter);
     const sev = normSeverity(a);
     const matchFilter = currentFilter === 'all' || sev === currentFilter;
     const search = currentSearch;
