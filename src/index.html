@@ -747,7 +747,10 @@ async function loadAll() {
     const res = await fetch('/api/alerts');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    console.log('DATA:', data);
+    console.log('PRIMER ITEM:', data.alerts?.[0] || data[0]);
     allAlerts = data.alerts || data || [];
+    console.log('ALL ALERTS:', allAlerts.length, allAlerts[0]);
     renderStats();
     renderDonut();
     renderBarChart();
