@@ -915,13 +915,13 @@ function onSearch() {
 
 function applyFilters() {
   filteredAlerts = allAlerts.filter(a => {
-    if (i === 0) console.log('SEV:', sev, 'FILTER:', currentFilter, 'MATCH:', currentFilter === 'all' || sev === currentFilter);
     const sev = normSeverity(a);
     const matchFilter = currentFilter === 'all' || sev === currentFilter;
     const search = currentSearch;
     const matchSearch = !search || [
       a.idAlert, a.resourceId, a.message, a.alertName, a.environment
     ].some(v => (v || '').toLowerCase().includes(search));
+    return matchFilter && matchSearch;
   });
 
   // sort
