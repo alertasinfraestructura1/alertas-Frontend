@@ -952,6 +952,8 @@ function renderTable() {
   const tbody = document.getElementById('alerts-tbody');
   const start = (currentPage - 1) * PAGE_SIZE;
   const page = filteredAlerts.slice(start, start + PAGE_SIZE);
+  console.log('FILTERED:', filteredAlerts.length, 'PAGE:', page.length, 'FILTER:', currentFilter);
+
 
   if (page.length === 0) {
     tbody.innerHTML = `<tr><td colspan="6">
