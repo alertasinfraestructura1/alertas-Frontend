@@ -685,10 +685,12 @@
       <table>
         <thead>
           <tr>
-            <th onclick="sortBy('alertId')" id="th-alertId">ID Alerta <span class="sort-arrow">↕</span></th>
+            <th onclick="sortBy('idAlert')">ID Alerta <span class="sort-arrow">↕</span></th>
             <th onclick="sortBy('severity')">Severidad</th>
-            <th onclick="sortBy('resource')" id="th-resource">Recurso</th>
-            <th onclick="sortBy('description')">Descripción</th>
+            <th onclick="sortBy('resourceId')">Recurso</th>
+            <th onclick="sortBy('message')">Mensaje</th>
+            <th onclick="sortBy('environment')">Ambiente</th>
+            <th onclick="sortBy('alertName')">Nombre Alerta</th>
             <th onclick="sortBy('assignedTo')">Asignado a</th>
             <th>Sugerencia</th>
           </tr>
@@ -865,7 +867,7 @@ function normSeverity(a) {
 function renderBarChart() {
   const resourceMap = {};
   allAlerts.forEach(a => {
-    const r = a.resource || a.resourceName || 'Desconocido';
+    const r = a.resourceId || 'Desconocido';
     resourceMap[r] = (resourceMap[r] || 0) + 1;
   });
   const sorted = Object.entries(resourceMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -916,9 +918,8 @@ function applyFilters() {
     const matchFilter = currentFilter === 'all' || sev === currentFilter;
     const search = currentSearch;
     const matchSearch = !search || [
-      a.alertId, a.resource, a.description, a.assignedTo, a.suggestion
+      a.idAlert, a.resourceId, a.message, a.alertName, a.environment
     ].some(v => (v || '').toLowerCase().includes(search));
-    return matchFilter && matchSearch;
   });
 
   // sort
@@ -972,15 +973,12 @@ function renderTable() {
   function initials(name) {
     return (name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
   }
-
+//estoooo
   tbody.innerHTML = page.map((a, i) => {
     const sev = normSeverity(a);
     const badgeLabel = sev === 'critical' ? 'Crítico' : sev === 'warning' ? 'Warning' : 'Info';
-    const sugg = a.suggestion || a.sugerencia || '';
-    const shortSugg = sugg.length > 60 ? sugg.slice(0, 57) + '…' : sugg;
-    const hasMore = sugg.length > 60;
     return `<tr class="fade-in" style="animation-delay:${i * 30}ms">
-      <td><span class="alert-id">${a.alertId || a.id || '—'}</span></td>
+      <td><span class="alert-id">${a.idAlert || '—'}</span></td>
       <td>
         <span class="badge ${sev}">
           <span class="badge-dot"></span>
@@ -989,24 +987,16 @@ function renderTable() {
       </td>
       <td>
         <div class="resource-cell">
-          <div class="resource-icon">${getIcon(a.resource)}</div>
+          <div class="resource-icon">${getIcon(a.resourceId)}</div>
           <div>
-            <div class="resource-name">${a.resource || '—'}</div>
+            <div class="resource-name">${a.resourceId || '—'}</div>
             <div class="resource-type">${a.resourceType || ''}</div>
           </div>
         </div>
       </td>
-      <td><span class="desc-text" title="${a.description || ''}">${a.description || '—'}</span></td>
-      <td>
-        <div class="assigned-cell">
-          <div class="avatar">${initials(a.assignedTo)}</div>
-          <span class="assigned-name">${a.assignedTo || 'Sin asignar'}</span>
-        </div>
-      </td>
-      <td>
-        <span class="suggestion-text">${shortSugg || '—'}</span>
-        ${hasMore ? `<span class="suggestion-expand" onclick="showSuggestion(\`${sugg.replace(/`/g,'\\`')}\`)">Ver completo</span>` : ''}
-      </td>
+      <td><span class="desc-text" title="${a.message || ''}">${a.message || '—'}</span></td>
+      <td><span class="assigned-name">${a.environment || '—'}</span></td>
+      <td><span class="suggestion-text">${a.alertName || '—'}</span></td>
     </tr>`;
   }).join('');
 }
@@ -1075,18 +1065,11 @@ function hideError() {
 //  DEMO DATA (fallback si la API no está lista)
 // ─────────────────────────────────────────────
 const DEMO_ALERTS = [
-  { alertId: 'ALT-0001', severity: 'Critical', resource: 'vm-prod-01', resourceType: 'Virtual Machine', description: 'CPU por encima del 95% por más de 15 min', assignedTo: 'Carlos Pérez', suggestion: 'Escalar verticalmente la VM a Standard_D4s_v3 o revisar procesos que consuman excesiva CPU. Considerar balanceo de carga.' },
-  { alertId: 'ALT-0002', severity: 'Warning',  resource: 'sql-prod-db', resourceType: 'SQL Database',   description: 'Uso de DTUs al 80%', assignedTo: 'Ana García',   suggestion: 'Revisar queries sin índice. Optimizar stored procedures. Considerar subir el tier de base de datos.' },
-  { alertId: 'ALT-0003', severity: 'Critical', resource: 'storage-bkp', resourceType: 'Storage Account',description: 'Capacidad al 98%', assignedTo: 'Luis Martín',  suggestion: 'Eliminar blobs expirados, habilitar lifecycle management policy para mover datos fríos a Archive tier.' },
-  { alertId: 'ALT-0004', severity: 'Warning',  resource: 'webapp-api',  resourceType: 'App Service',    description: 'Tiempo de respuesta > 2s en promedio', assignedTo: 'María López',  suggestion: 'Habilitar caching en el API Management, revisar dependencias externas con alta latencia.' },
-  { alertId: 'ALT-0005', severity: 'Informational', resource: 'vnet-hub', resourceType: 'Virtual Network', description: 'Nueva regla NSG aplicada', assignedTo: 'Ops Team', suggestion: 'Revisar que la nueva regla no afecte conectividad de las subnets de producción.' },
-  { alertId: 'ALT-0006', severity: 'Critical', resource: 'aks-cluster', resourceType: 'AKS',            description: 'Nodo NotReady detectado', assignedTo: 'Carlos Pérez', suggestion: 'Ejecutar kubectl describe node para detalles. Considerar cordon + drain y reciclar el nodo.' },
-  { alertId: 'ALT-0007', severity: 'Warning',  resource: 'cosmos-main', resourceType: 'Cosmos DB',      description: 'Request Units consumidas al 75%', assignedTo: 'Ana García',   suggestion: 'Revisar consultas sin partition key, habilitar autoscale RU para absorber picos de demanda.' },
-  { alertId: 'ALT-0008', severity: 'Warning',  resource: 'vm-dev-02',   resourceType: 'Virtual Machine', description: 'Memoria disponible < 500MB', assignedTo: 'Luis Martín',  suggestion: 'Revisar aplicaciones con memory leaks, considerar upgrade de RAM o redistribuir carga.' },
-  { alertId: 'ALT-0009', severity: 'Informational', resource: 'keyvault-prod', resourceType: 'Key Vault', description: 'Certificado expira en 30 días', assignedTo: 'Security Team', suggestion: 'Renovar certificado antes de la fecha de expiración para evitar interrupción de servicio.' },
-  { alertId: 'ALT-0010', severity: 'Critical', resource: 'apigw-prod',  resourceType: 'API Gateway',    description: 'Tasa de error 5xx > 5%', assignedTo: 'María López',  suggestion: 'Revisar logs de backend, verificar disponibilidad de servicios upstream, activar circuit breaker.' },
-  { alertId: 'ALT-0011', severity: 'Warning',  resource: 'redis-cache', resourceType: 'Redis Cache',    description: 'Hit ratio < 60%', assignedTo: 'Carlos Pérez', suggestion: 'Revisar TTL de keys, aumentar tamaño del cache, analizar patrones de acceso con Redis Monitor.' },
-  { alertId: 'ALT-0012', severity: 'Informational', resource: 'funcapp-01', resourceType: 'Function App', description: 'Cold start detectado > 10s', assignedTo: 'Ana García', suggestion: 'Habilitar Always On o usar Premium plan para eliminar cold starts en funciones críticas.' },
+  { idAlert: 'ALT-0001', severity: 'Critical',     resourceId: 'APP-PROD-01', resourceType: 'Aplicacion', environment: 'PROD', alertName: 'CPU al límite',                      message: 'CPU por encima del 95% por más de 15 min', metricValue: 95.4 },
+  { idAlert: 'ALT-0002', severity: 'Warning',      resourceId: 'APP-QA-01',   resourceType: 'Aplicacion', environment: 'QA',   alertName: 'Espacio en tablespace',              message: 'Tablespace USERS llegando a su capacidad máxima.', metricValue: 71.09 },
+  { idAlert: 'ALT-0003', severity: 'Critical',     resourceId: 'DB-PROD-01',  resourceType: 'Base de datos', environment: 'PROD', alertName: 'Conexiones agotadas',             message: 'Pool de conexiones al 100%', metricValue: 100 },
+  { idAlert: 'ALT-0004', severity: 'Warning',      resourceId: 'APP-DEV-02',  resourceType: 'Aplicacion', environment: 'DEV',  alertName: 'Tiempo de respuesta elevado',        message: 'Latencia promedio > 2s', metricValue: 2.3 },
+  { idAlert: 'ALT-0005', severity: 'Informational',resourceId: 'NET-QA-01',   resourceType: 'Red',        environment: 'QA',   alertName: 'Nueva regla de firewall aplicada',   message: 'Regla NSG actualizada en subred QA', metricValue: null },
 ];
 </script>
 </body>

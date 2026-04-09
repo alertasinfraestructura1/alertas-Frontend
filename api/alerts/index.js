@@ -74,4 +74,14 @@ module.exports = async function (context, req) {
     };
 
   } catch (error) {
-    context.log.error("Error
+    context.log.error("Error consultando Cosmos DB:", error.message);
+    context.res = {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "Error al consultar la base de datos",
+        detail: error.message,
+      }),
+    };
+  }
+};
