@@ -56,6 +56,9 @@ module.exports = async function (context, req) {
       "SELECT c.idAlert, c.assignedTo, c.aiSuggestion FROM c"
     ).fetchAll();
 
+    context.log('AI UPDATES count:', aiUpdates.length);
+    context.log('AI UPDATES sample:', JSON.stringify(aiUpdates.slice(0, 2)));
+
     // ── 3. Crear mapa idAlert → aiUpdate ──────
     const aiMap = {};
     aiUpdates.forEach(ai => {
