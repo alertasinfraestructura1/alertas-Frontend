@@ -82,7 +82,8 @@ module.exports = async function (context, req) {
         createdAt:    a.createdAt    || null,
         assignedTo:   aiMap[a.idAlert].assignedTo   || "",
         aiSuggestion: aiMap[a.idAlert].aiSuggestion || "",
-      }));
+      }))
+       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     context.res = {
       status: 200,
