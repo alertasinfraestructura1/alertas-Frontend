@@ -15,7 +15,7 @@ module.exports = async function (context, req) {
     let query = `SELECT c.idAlert, c.resourceId, c.resourceType, c.environment,
                         c.alertName, c.category, c.severity, c.status,
                         c.message, c.metricValue, c.createdAt
-                 FROM c`;
+                 FROM c order by c.createdAt DESC`;
 
     const params = [];
     const conditions = [];
