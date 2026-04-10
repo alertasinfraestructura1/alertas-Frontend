@@ -3,6 +3,7 @@ const { CosmosClient } = require("@azure/cosmos");
 const client = new CosmosClient(process.env.COSMOSDB_CONNECTION_STRING);
 const DATABASE_ID  = process.env.COSMOSDB_DATABASE_ID  || "Bancsito";
 const CONTAINER_ID = process.env.COSMOSDB_CONTAINER_ID || "Alertas";
+const AI_CONTAINER_ID = "AiUpdate";
 
 module.exports = async function (context, req) {
   context.log("GET /api/alerts - iniciando consulta a Cosmos DB");
@@ -10,8 +11,10 @@ module.exports = async function (context, req) {
   const { severity, search } = req.query;
 
   try {
-    const container = client.database(DATABASE_ID).container(CONTAINER_ID);
+    const alertsContainer = client.database(DATABASE_ID).container(CONTAINER_ID);
+    const aiContainer     = client.database(DATABASE_ID).container(AI_CONTAINER_ID);
 
+    // ── 1. Query alertas ──────────────────────
     let query = `SELECT c.idAlert, c.resourceId, c.resourceType, c.environment,
                         c.alertName, c.category, c.severity, c.status,
                         c.message, c.metricValue, c.createdAt
@@ -32,8 +35,7 @@ module.exports = async function (context, req) {
         CONTAINS(LOWER(c.idAlert),    @search) OR
         CONTAINS(LOWER(c.resourceId), @search) OR
         CONTAINS(LOWER(c.message),    @search) OR
-        CONTAINS(LOWER(c.alertName),  @search) OR
-        CONTAINS(LOWER(c.environment),@search)
+        CONTAINS(LOWER(c.alertName),  @search)
       )`);
       params.push({ name: "@search", value: search.toLowerCase() });
     }
@@ -42,13 +44,25 @@ module.exports = async function (context, req) {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    query += " ORDER BY c._ts DESC";
+    query += " ORDER BY c.createdAt DESC";
 
-    const { resources: alerts } = await container.items.query({
+    const { resources: alerts } = await alertsContainer.items.query({
       query,
       parameters: params,
     }).fetchAll();
 
+    // ── 2. Query AiUpdate ─────────────────────
+    const { resources: aiUpdates } = await aiContainer.items.query(
+      "SELECT c.idAlert, c.assignedTo, c.aiSuggestion FROM c"
+    ).fetchAll();
+
+    // ── 3. Crear mapa idAlert → aiUpdate ──────
+    const aiMap = {};
+    aiUpdates.forEach(ai => {
+      aiMap[ai.idAlert] = ai;
+    });
+
+    // ── 4. Combinar ───────────────────────────
     const normalized = alerts.map(a => ({
       idAlert:      a.idAlert      || "",
       resourceId:   a.resourceId   || "",
@@ -61,6 +75,8 @@ module.exports = async function (context, req) {
       message:      a.message      || "",
       metricValue:  a.metricValue  ?? null,
       createdAt:    a.createdAt    || null,
+      assignedTo:   aiMap[a.idAlert]?.assignedTo   || "",
+      aiSuggestion: aiMap[a.idAlert]?.aiSuggestion || "",
     }));
 
     context.res = {

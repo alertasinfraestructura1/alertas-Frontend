@@ -692,12 +692,12 @@
      <!--   <th onclick="sortBy('environment')">Ambiente</th>-->
       <!-- <th onclick="sortBy('alertName')">Nombre Alerta</th>-->
             <th onclick="sortBy('assignedTo')">Asignado a</th>
-            <th>Sugerencia</th>
+            <th>Sugerencia IA</th>
           </tr>
         </thead>
         <tbody id="alerts-tbody">
           <tr>
-            <td colspan="4">
+            <td colspan="5">
               <div class="state-box"><div class="spinner"></div><p>Cargando alertas…</p></div>
             </td>
           </tr>
@@ -999,8 +999,11 @@ function renderTable() {
         </div>
       </td>
       <td><span class="desc-text" title="${a.message || ''}">${a.message || '—'}</span></td>
-
-     
+      <td><span class="assigned-name">${a.assignedTo || 'Sin asignar'}</span></td>
+      <td>
+        <span class="suggestion-text">${a.aiSuggestion ? a.aiSuggestion.slice(0, 60) + '…' : '—'}</span>
+        ${a.aiSuggestion ? `<span class="suggestion-expand" onclick="showSuggestion(\`${a.aiSuggestion.replace(/`/g,'\\`').replace(/\n/g,'\\n')}\`)">Ver completo</span>` : ''}
+      </td>
     </tr>`;
   }).join('');
 }
