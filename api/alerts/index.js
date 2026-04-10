@@ -62,22 +62,24 @@ module.exports = async function (context, req) {
       aiMap[ai.idAlert] = ai;
     });
 
-    // ── 4. Combinar ───────────────────────────
-    const normalized = alerts.map(a => ({
-      idAlert:      a.idAlert      || "",
-      resourceId:   a.resourceId   || "",
-      resourceType: a.resourceType || "",
-      environment:  a.environment  || "",
-      alertName:    a.alertName    || "",
-      category:     a.category     || "",
-      severity:     a.severity     || "Informational",
-      status:       a.status       || "Open",
-      message:      a.message      || "",
-      metricValue:  a.metricValue  ?? null,
-      createdAt:    a.createdAt    || null,
-      assignedTo:   aiMap[a.idAlert]?.assignedTo   || "",
-      aiSuggestion: aiMap[a.idAlert]?.aiSuggestion || "",
-    }));
+    // ── 4. Combinar — solo alertas que tienen AiUpdate ────
+    const normalized = alerts
+      .filter(a => aiMap[a.idAlert])
+      .map(a => ({
+        idAlert:      a.idAlert      || "",
+        resourceId:   a.resourceId   || "",
+        resourceType: a.resourceType || "",
+        environment:  a.environment  || "",
+        alertName:    a.alertName    || "",
+        category:     a.category     || "",
+        severity:     a.severity     || "Informational",
+        status:       a.status       || "Open",
+        message:      a.message      || "",
+        metricValue:  a.metricValue  ?? null,
+        createdAt:    a.createdAt    || null,
+        assignedTo:   aiMap[a.idAlert].assignedTo   || "",
+        aiSuggestion: aiMap[a.idAlert].aiSuggestion || "",
+      }));
 
     context.res = {
       status: 200,
