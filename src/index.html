@@ -690,14 +690,14 @@
             <th onclick="sortBy('resourceId')">Recurso</th>
             <th onclick="sortBy('message')">Mensaje</th>
      <!--   <th onclick="sortBy('environment')">Ambiente</th>-->
-            <th onclick="sortBy('alertName')">Nombre Alerta</th>
+      <!-- <th onclick="sortBy('alertName')">Nombre Alerta</th>-->
             <th onclick="sortBy('assignedTo')">Asignado a</th>
             <th>Sugerencia</th>
           </tr>
         </thead>
         <tbody id="alerts-tbody">
           <tr>
-            <td colspan="5">
+            <td colspan="4">
               <div class="state-box"><div class="spinner"></div><p>Cargando alertas…</p></div>
             </td>
           </tr>
@@ -1000,7 +1000,7 @@ function renderTable() {
       </td>
       <td><span class="desc-text" title="${a.message || ''}">${a.message || '—'}</span></td>
 
-      <td><span class="suggestion-text">${a.alertName || '—'}</span></td>
+     
     </tr>`;
   }).join('');
 }
