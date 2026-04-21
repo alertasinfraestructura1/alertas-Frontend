@@ -1050,6 +1050,7 @@ function goPage(p) {
 //  MODAL
 // ─────────────────────────────────────────────
 function showSuggestion(text) {
+  console.log('Texto recibido:', text);
   //document.getElementById('modal-body').textContent = text;
   document.getElementById('modal-body').innerHTML = marked.parse(text);
   document.getElementById('modal-overlay').classList.add('show');
