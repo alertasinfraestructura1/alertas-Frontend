@@ -6,6 +6,7 @@
   <title>Sherlog Centro de Alertas · Atlas.ia</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  
   <style>
     :root {
       --bg:       #0d0f14;
@@ -1048,7 +1049,8 @@ function goPage(p) {
 //  MODAL
 // ─────────────────────────────────────────────
 function showSuggestion(text) {
-  document.getElementById('modal-body').textContent = text;
+  //document.getElementById('modal-body').textContent = text;
+  document.getElementById('modal-body').innerHTML = marked.parse(text);
   document.getElementById('modal-overlay').classList.add('show');
 }
 function closeModal(e) {
